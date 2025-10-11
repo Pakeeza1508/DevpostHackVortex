@@ -29,28 +29,16 @@ Follow these steps to set up your local development environment.
 ```bash
 git clone <your-repository-url>
 cd <your-project-directory>
-Step 2: Backend Setup (Python & FastAPI)
+```
 
-We will use a Python virtual environment to keep dependencies isolated.
-
-Create and Activate the Virtual Environment
-
-From the project's root directory, create the environment:
+### Step 2: Backend Setup (Python & FastAPI)
 
 ```
 # On Windows
 py -m venv venv
 
-# On macOS / Linux
-python3 -m venv venv
-
 Activate the environment:
 
-code
-Bash
-download
-content_copy
-expand_less
 # On Windows
 .\venv\Scripts\activate
 ```
@@ -63,10 +51,7 @@ pip install -r backend/requirements.txt
 Configure Environment Variables
 ```
 Navigate to the backend directory.
-
 Create a new file named .env.
-
-Add the following content to this file, 
 
 # Get this from MongoDB Atlas (see documentation)
 MONGO_URL="mongodb+srv://your_user:your_password@your_cluster.mongodb.net/"
@@ -77,7 +62,6 @@ DB_NAME="dental_quest_db"
 # Get this from your Groq AI dashboard
 GROQ_API_KEY="your_groq_api_key_here"
 
-# This is required to allow the frontend to communicate with the backend
 CORS_ORIGINS="http://localhost:3000"
 ```
 ### Step 3: Frontend Setup (React & Yarn)
@@ -85,8 +69,6 @@ CORS_ORIGINS="http://localhost:3000"
 Navigate to the Frontend Directory
 ```
 cd frontend
-
-Install Frontend Dependencies
 yarn install
 ```
 Configure Environment Variables
