@@ -90,3 +90,6 @@ frontend/node_modules/.cache/default-development/5.pack
 # Ignore utility scripts and generated output files
 code.py
 combined_project_code.txt
+
+# Ignore Emergent tool-specific configuration
+.emergent/
