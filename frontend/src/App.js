@@ -10,6 +10,7 @@ import HomePage from "./components/HomePage";
 import LessonPage from "./components/LessonPage";
 import QuizPage from "./components/QuizPage";
 import ProfilePage from "./components/ProfilePage";
+import ChallengePage from "./components/ChallengePage";
 import { Toaster } from "./components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -33,8 +34,8 @@ function App() {
       
       // Create or get demo user
       const demoUser = {
-        username: "Space Explorer",
-        email: "explorer@dentalquest.space"
+        username: "Advanced Explorer",
+        email: "explorer@dentalquest.academy"
       };
       
       try {
@@ -44,7 +45,7 @@ function App() {
         // User might already exist, create a new one with timestamp
         const newUser = {
           ...demoUser,
-          username: `Space Explorer ${Date.now()}`
+          username: `Advanced Explorer ${Date.now()}`
         };
         const userResponse = await axios.post(`${API}/users`, newUser);
         setUser(userResponse.data);
@@ -95,6 +96,14 @@ function App() {
               element={
                 <QuizPage 
                   lesson={currentLesson} 
+                  user={user}
+                />
+              } 
+            />
+            <Route 
+              path="/challenge/:challengeType" 
+              element={
+                <ChallengePage 
                   user={user}
                 />
               } 
