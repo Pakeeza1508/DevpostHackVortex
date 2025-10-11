@@ -26,32 +26,19 @@ Follow these steps to set up your local development environment.
 
 ### Step 1: Clone the Repository
 
-First, clone the project repository to your local machine.
-
 ```bash
 git clone <your-repository-url>
 cd <your-project-directory>
+
 Step 2: Backend Setup (Python & FastAPI)
-
-We will use a Python virtual environment to keep dependencies isolated.
-
-Create and Activate the Virtual Environment
 
 From the project's root directory, create the environment:
 
 # On Windows
 py -m venv venv
 
-# On macOS / Linux
-python3 -m venv venv
-
 Activate the environment:
 
-code
-Bash
-download
-content_copy
-expand_less
 # On Windows
 .\venv\Scripts\activate
 
