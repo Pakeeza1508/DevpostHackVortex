@@ -229,7 +229,7 @@ async def ask_ai_tutor(query: AIQuery):
                     "content": f"{context}\n\n{query.question}"
                 }
             ],
-            model="llama3-70b-8192",
+            model="openai/gpt-oss-20b",
             temperature=0.7,
             max_tokens=300
         )
