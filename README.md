@@ -31,7 +31,9 @@ First, clone the project repository to your local machine.
 ```bash
 git clone <your-repository-url>
 cd <your-project-directory>
-Step 2: Backend Setup (Python & FastAPI)
+```
+
+### Step 2: Backend Setup (Python & FastAPI)
 
 We will use a Python virtual environment to keep dependencies isolated.
 
@@ -39,35 +41,31 @@ Create and Activate the Virtual Environment
 
 From the project's root directory, create the environment:
 
+```
 # On Windows
 py -m venv venv
 
 # On macOS / Linux
 python3 -m venv venv
-
+```
 Activate the environment:
-
-code
-Bash
-download
-content_copy
-expand_less
+```
 # On Windows
 .\venv\Scripts\activate
-
+```
 Your terminal prompt should now be prefixed with (venv).
 
-Install Backend Dependencies
-
+### Install Backend Dependencies
+```
 pip install -r backend/requirements.txt
-
+```
 Configure Environment Variables
-
+```
 Navigate to the backend directory.
 
 Create a new file named .env.
 
-Add the following content to this file, replacing the placeholder values with your actual credentials:
+Add the following content to this file, 
 
 # Get this from MongoDB Atlas (see documentation)
 MONGO_URL="mongodb+srv://your_user:your_password@your_cluster.mongodb.net/"
@@ -80,52 +78,47 @@ GROQ_API_KEY="your_groq_api_key_here"
 
 # This is required to allow the frontend to communicate with the backend
 CORS_ORIGINS="http://localhost:3000"
-
-Step 3: Frontend Setup (React & Yarn)
+```
+### Step 3: Frontend Setup (React & Yarn)
 
 Navigate to the Frontend Directory
-
+```
 cd frontend
 
 Install Frontend Dependencies
-Use Yarn to install all the packages listed in package.json.
-
 yarn install
-
+```
 Configure Environment Variables
-
-In the frontend directory, create a new file named .env.local.
-
+```
 # frontend/.env.local
 
 REACT_APP_BACKEND_URL=http://localhost:8000
 WDS_SOCKET_PORT=0
 GENERATE_SOURCEMAP=false
-
-▶️ Running the Application
-
-To run the application, you must have both the backend and frontend servers running at the same time. You will need to open two separate terminal windows.
-
+```
+### ▶️ Running the Application
 Terminal 1: Start the Backend Server
 
 Navigate to the project's root directory.
-
-Activate the virtual environment: .\venv\Scripts\activate
-
+```
+Activate the virtual environment: 
+.\venv\Scripts\activate
+```
 Start the FastAPI server using Uvicorn:
-
+```
 uvicorn backend.server:app --reload
-
+```
 Your backend API is now running at http://localhost:8000. Leave this terminal open.
 
-Terminal 2: Start the Frontend Application
+### Terminal 2: Start the Frontend Application
 
 Open a new terminal window.
-
-Navigate to the frontend directory: cd frontend
-
+```
+Navigate to the frontend directory: 
+cd frontend
+```
 Start the React development server:
-
+```
 yarn start
-
+```
 Your default web browser should automatically open to http://localhost:3000. The application is now running!
