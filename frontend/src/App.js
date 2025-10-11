@@ -1,52 +1,117 @@
-import { useEffect } from "react";
-import "@/App.css";
+import React, { useState, useEffect, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import "./App.css";
+
+// Import components
+import LoadingScreen from "./components/LoadingScreen";
+import HomePage from "./components/HomePage";
+import LessonPage from "./components/LessonPage";
+import QuizPage from "./components/QuizPage";
+import ProfilePage from "./components/ProfilePage";
+import { Toaster } from "./components/ui/sonner";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
+// Main App Component
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [lessons, setLessons] = useState([]);
+  const [currentLesson, setCurrentLesson] = useState(null);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      // Initialize sample data
+      await axios.post(`${API}/initialize-data`);
+      
+      // Create or get demo user
+      const demoUser = {
+        username: "Space Explorer",
+        email: "explorer@dentalquest.space"
+      };
+      
+      try {
+        const userResponse = await axios.post(`${API}/users`, demoUser);
+        setUser(userResponse.data);
+      } catch (e) {
+        // User might already exist, create a new one with timestamp
+        const newUser = {
+          ...demoUser,
+          username: `Space Explorer ${Date.now()}`
+        };
+        const userResponse = await axios.post(`${API}/users`, newUser);
+        setUser(userResponse.data);
+      }
+      
+      // Get lessons
+      const lessonsResponse = await axios.get(`${API}/lessons`);
+      setLessons(lessonsResponse.data);
+      
+      // Simulate loading for better UX
+      setTimeout(() => setIsLoading(false), 3000);
+    } catch (error) {
+      console.error("App initialization error:", error);
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
-  return (
-    <div className="App">
+    <div className="App min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden">
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
+        <AnimatePresence mode="wait">
+          <Routes>
+            <Route 
+              path="/" 
+              element={
+                <HomePage 
+                  user={user} 
+                  lessons={lessons} 
+                  onSelectLesson={setCurrentLesson}
+                />
+              } 
+            />
+            <Route 
+              path="/lesson/:id" 
+              element={
+                <LessonPage 
+                  lesson={currentLesson} 
+                  user={user}
+                />
+              } 
+            />
+            <Route 
+              path="/quiz/:id" 
+              element={
+                <QuizPage 
+                  lesson={currentLesson} 
+                  user={user}
+                />
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProfilePage 
+                  user={user} 
+                  setUser={setUser}
+                />
+              } 
+            />
+          </Routes>
+        </AnimatePresence>
       </BrowserRouter>
+      <Toaster />
     </div>
   );
 }
