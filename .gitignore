@@ -31,7 +31,6 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
-
 *token.json*
 *credentials.json*
 
@@ -80,8 +79,6 @@ agenthub/agents/youtube/db
 android-sdk/ frontend/node_modules/.cache/default-development/2.pack
 frontend/node_modules/.cache/default-development/3.pack
 frontend/node_modules/.cache/default-development/5.pack
-
-
 
 # Ignore environment files - they contain secret API keys and passwords!
 .env
