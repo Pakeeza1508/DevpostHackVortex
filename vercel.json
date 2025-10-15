@@ -7,7 +7,11 @@
     },
     {
       "src": "frontend/package.json",
-      "use": "@vercel/static-build"
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "cd frontend && yarn build",
+        "outputDirectory": "frontend/build"
+      }
     }
   ],
   "routes": [
@@ -16,20 +20,11 @@
       "dest": "/backend/server.py"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "/frontend/static/$1"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/manifest.json"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/index.html"
+      "dest": "/index.html"
     }
   ]
 }
