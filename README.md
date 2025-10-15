@@ -17,7 +17,6 @@ Before you begin, ensure you have the following installed on your system:
 3.  **Yarn** (If you don't have it, install it globally by running: `npm install -g yarn`)
 4.  **MongoDB Atlas Account:** A free account for the cloud database.
 5.  **Groq AI Account:** A free account to get an API key for the AI tutor.
-
 ---
 
 ## ⚙️ Setup and Installation Guide
