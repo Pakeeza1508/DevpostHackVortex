@@ -22,6 +22,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # Groq client
+print(mongo_url)
 groq_client = Groq(api_key=os.environ['GROQ_API_KEY'])
 
 # Create the main app without a prefix
@@ -88,6 +89,14 @@ class AIResponse(BaseModel):
     response: str
     confidence: float
     suggestions: List[str] = Field(default_factory=list)
+
+    def to_markdown(self) -> str:
+        markdown = f"# AI Response\n\n{self.response.strip()}\n\n"
+        markdown += f"**Confidence:** {round(self.confidence * 100, 2)}%\n\n"
+        if self.suggestions:
+            markdown += "## Suggestions\n\n"
+            markdown += "\n".join([f"- {s}" for s in self.suggestions])
+        return markdown
 
 # Utility function for async operations
 def async_route(func):
@@ -244,11 +253,18 @@ async def ask_ai_tutor(query: AIQuery):
             "Explore dental hygiene tips"
         ]
         
-        return AIResponse(
-            response=response_text,
-            confidence=0.9,
-            suggestions=suggestions
-        )
+        raw_text = response_text  # original content from LLM
+
+        ai_response = AIResponse(
+        response=raw_text,  # frontend will render as markdown itself
+        confidence=0.9,
+        suggestions=suggestions
+)
+
+        return ai_response
+
+
+
     
     except Exception as e:
         logging.error(f"AI query error: {str(e)}")
@@ -344,7 +360,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
