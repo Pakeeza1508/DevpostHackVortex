@@ -284,7 +284,7 @@ async def get_user_progress(user_id: str):
     
     return progress
 
-    @api_router.get("/debug-env")
+@api_router.get("/debug-env")
 async def debug_environment_variables():
     mongo_url = os.environ.get("MONGO_URL", "--- NOT SET ---")
     groq_api_key = os.environ.get("GROQ_API_KEY", "--- NOT SET ---")
