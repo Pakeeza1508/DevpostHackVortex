@@ -357,11 +357,13 @@ async def initialize_sample_data():
 # Include the router in the main app
 app.include_router(api_router)
 
+allowed_origin_regex = r"https?://(localhost:3000|.*\.vercel\.app)"
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     # allow_origins=["*"],
-    allow_origins=allowed_origins,
+    allow_origin_regex=allowed_origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )
