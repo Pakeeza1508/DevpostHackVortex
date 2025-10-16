@@ -432,6 +432,7 @@ from datetime import datetime, timezone
 from groq import Groq
 import asyncio
 from functools import wraps
+from pymongo.errors import DuplicateKeyError
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -530,8 +531,8 @@ def async_route(func):
 async def root():
     return {"message": "Welcome to Dental Quest API - Your AI-Powered Dental Education Platform!"}
 
-@api_router.post("/users", response_model=User)
-async def create_user(user_data: UserCreate):
+# @api_router.post("/users", response_model=User)
+# async def create_user(user_data: UserCreate):
     user_dict = user_data.model_dump()
     user_obj = User(**user_dict)
     
@@ -542,6 +543,35 @@ async def create_user(user_data: UserCreate):
     await db.users.insert_one(doc)
     return user_obj
 
+# REPLACE your old create_user function with this one
+@api_router.post("/users", response_model=User)
+async def create_user(user_data: UserCreate):
+    try:
+        user_dict = user_data.model_dump()
+        
+        # First, check if a user with this email already exists
+        existing_user = await db.users.find_one({"email": user_dict["email"]}, {"_id": 0})
+        if existing_user:
+            # If user exists, parse and return their data
+            if isinstance(existing_user.get('created_at'), str):
+                existing_user['created_at'] = datetime.fromisoformat(existing_user['created_at'])
+            if isinstance(existing_user.get('last_active'), str):
+                existing_user['last_active'] = datetime.fromisoformat(existing_user['last_active'])
+            return User(**existing_user)
+
+        # If user does not exist, create a new one
+        user_obj = User(**user_dict)
+        doc = user_obj.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['last_active'] = doc['last_active'].isoformat()
+        
+        await db.users.insert_one(doc)
+        return user_obj
+        
+    except Exception as e:
+        logging.error(f"Error in create_user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+        
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str):
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
@@ -805,7 +835,3 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# @app.on_event("shutdown")
-# async def shutdown_db_client():
-#     client.close()

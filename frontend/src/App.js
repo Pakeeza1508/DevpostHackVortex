@@ -28,39 +28,67 @@ function App() {
     initializeApp();
   }, []);
 
+  // const initializeApp = async () => {
+  //   try {
+  //     // Initialize sample data
+  //     await axios.post(`${API}/initialize-data`);
+
+  //     // Create or get demo user
+  //     const demoUser = {
+  //       username: "Advanced Explorer",
+  //       email: "explorer@dentalquest.academy"
+  //     };
+
+  //     try {
+  //       const userResponse = await axios.post(`${API}/users`, demoUser);
+  //       setUser(userResponse.data);
+  //     } catch (e) {
+  //       // User might already exist, create a new one with timestamp
+  //       const newUser = {
+  //         ...demoUser,
+  //         username: `Advanced Explorer ${Date.now()}`
+  //       };
+  //       const userResponse = await axios.post(`${API}/users`, newUser);
+  //       setUser(userResponse.data);
+  //     }
+
+  //     // Get lessons
+  //     const lessonsResponse = await axios.get(`${API}/lessons`);
+  //     setLessons(lessonsResponse.data);
+
+  //     // Simulate loading for better UX
+  //     setTimeout(() => setIsLoading(false), 3000);
+  //   } catch (error) {
+  //     console.error("App initialization error:", error);
+  //     setIsLoading(false);
+  //   }
+  // };
+  // REPLACE your old initializeApp function with this one
   const initializeApp = async () => {
     try {
-      // Initialize sample data
+      // Initialize sample data first
       await axios.post(`${API}/initialize-data`);
-      
-      // Create or get demo user
+
+      // Now, try to find or create the demo user.
+      // The updated backend handles this logic automatically.
       const demoUser = {
         username: "Advanced Explorer",
         email: "explorer@dentalquest.academy"
       };
-      
-      try {
-        const userResponse = await axios.post(`${API}/users`, demoUser);
-        setUser(userResponse.data);
-      } catch (e) {
-        // User might already exist, create a new one with timestamp
-        const newUser = {
-          ...demoUser,
-          username: `Advanced Explorer ${Date.now()}`
-        };
-        const userResponse = await axios.post(`${API}/users`, newUser);
-        setUser(userResponse.data);
-      }
-      
+
+      const userResponse = await axios.post(`${API}/users`, demoUser);
+      setUser(userResponse.data);
+
       // Get lessons
       const lessonsResponse = await axios.get(`${API}/lessons`);
       setLessons(lessonsResponse.data);
-      
+
       // Simulate loading for better UX
-      setTimeout(() => setIsLoading(false), 3000);
+      setTimeout(() => setIsLoading(false), 2000); // Reduced timeout
     } catch (error) {
       console.error("App initialization error:", error);
-      setIsLoading(false);
+      // You can add more specific error handling here if needed
+      setIsLoading(false); // Stop loading even if there's an error
     }
   };
 
@@ -73,50 +101,50 @@ function App() {
       <BrowserRouter>
         <AnimatePresence mode="wait">
           <Routes>
-            <Route 
-              path="/" 
+            <Route
+              path="/"
               element={
-                <HomePage 
-                  user={user} 
-                  lessons={lessons} 
+                <HomePage
+                  user={user}
+                  lessons={lessons}
                   onSelectLesson={setCurrentLesson}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/lesson/:id" 
+            <Route
+              path="/lesson/:id"
               element={
-                <LessonPage 
-                  lesson={currentLesson} 
+                <LessonPage
+                  lesson={currentLesson}
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/quiz/:id" 
+            <Route
+              path="/quiz/:id"
               element={
-                <QuizPage 
-                  lesson={currentLesson} 
+                <QuizPage
+                  lesson={currentLesson}
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/challenge/:challengeType" 
+            <Route
+              path="/challenge/:challengeType"
               element={
-                <ChallengePage 
+                <ChallengePage
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/profile" 
+            <Route
+              path="/profile"
               element={
-                <ProfilePage 
-                  user={user} 
+                <ProfilePage
+                  user={user}
                   setUser={setUser}
                 />
-              } 
+              }
             />
           </Routes>
         </AnimatePresence>
