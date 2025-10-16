@@ -381,14 +381,12 @@ async def initialize_sample_data():
         
     return {"message": "Sample data initialized successfully"}
 
-    except Exception as e:
-        # Log the detailed error to Vercel logs
-        logging.error(f"DATABASE ERROR during data initialization: {e}")
-        # Return a specific error message to the frontend
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to initialize data. A database error occurred: {e}"
-        )
+except Exception as e:
+    logging.error(f"DATABASE ERROR during data initialization: {str(e)}")
+    raise HTTPException(
+        status_code=500,
+        detail=f"Failed to initialize data. A database error occurred: {str(e)}"
+    )
 
 # Include the router in the main app
 app.include_router(api_router)
