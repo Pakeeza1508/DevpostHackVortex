@@ -443,7 +443,7 @@ async def lifespan(app: FastAPI):
     db_name = os.environ.get("DB_NAME")
 
     if not mongo_url or not db_name:
-        logging.error("FATAL ERROR: MONGO_URL and DB_NAME must be set in Vercel environment variables.")
+        logging.error("FATAL ERROR: MONGO_URL and DB_NAME must be set.")
         app.state.mongodb_client = None
         app.state.mongodb = None
     else:
@@ -455,7 +455,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # This code runs on shutdown.
-    if app.state.mongodb_client:
+    if hasattr(app.state, 'mongodb_client') and app.state.mongodb_client:
         print("Closing database connection.")
         app.state.mongodb_client.close()
 
@@ -473,7 +473,7 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 api_router = APIRouter(prefix="/api")
 
 
-# --- Define Models (No changes needed) ---
+# --- Define Models ---
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -525,13 +525,10 @@ class AIResponse(BaseModel):
 
 
 # --- API Routes (Updated to use request.app.state.mongodb) ---
-# Helper function to get the database connection safely
 def get_database(request: Request):
-    db = request.app.state.mongodb
-    if db is None:
-        logging.error("Database connection not available.")
-        raise HTTPException(status_code=500, detail="Database connection is not configured. Check server logs.")
-    return db
+    if not hasattr(request.app.state, 'mongodb') or request.app.state.mongodb is None:
+        raise HTTPException(status_code=500, detail="Database connection is not available.")
+    return request.app.state.mongodb
 
 @api_router.get("/")
 async def root():
@@ -542,7 +539,6 @@ async def create_user(user_data: UserCreate, request: Request):
     db = get_database(request)
     try:
         user_dict = user_data.model_dump()
-        
         existing_user = await db.users.find_one({"email": user_dict["email"]}, {"_id": 0})
         if existing_user:
             if isinstance(existing_user.get('created_at'), str):
@@ -550,18 +546,15 @@ async def create_user(user_data: UserCreate, request: Request):
             if isinstance(existing_user.get('last_active'), str):
                 existing_user['last_active'] = datetime.fromisoformat(existing_user['last_active'])
             return User(**existing_user)
-
         user_obj = User(**user_dict)
         doc = user_obj.model_dump()
         doc['created_at'] = doc['created_at'].isoformat()
         doc['last_active'] = doc['last_active'].isoformat()
-        
         await db.users.insert_one(doc)
         return user_obj
-        
     except Exception as e:
         logging.error(f"Error in create_user: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred in create_user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error in create_user: {str(e)}")
 
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
@@ -569,12 +562,10 @@ async def get_user(user_id: str, request: Request):
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    if isinstance(user['created_at'], str):
+    if isinstance(user.get('created_at'), str):
         user['created_at'] = datetime.fromisoformat(user['created_at'])
-    if isinstance(user['last_active'], str):
+    if isinstance(user.get('last_active'), str):
         user['last_active'] = datetime.fromisoformat(user['last_active'])
-    
     return user
 
 @api_router.get("/lessons", response_model=List[Lesson])
@@ -583,13 +574,10 @@ async def get_lessons(request: Request, level: Optional[int] = None):
     query = {}
     if level:
         query["level"] = level
-    
     lessons = await db.lessons.find(query, {"_id": 0}).to_list(1000)
-    
     for lesson in lessons:
-        if isinstance(lesson['created_at'], str):
+        if isinstance(lesson.get('created_at'), str):
             lesson['created_at'] = datetime.fromisoformat(lesson['created_at'])
-    
     return lessons
 
 @api_router.get("/lessons/{lesson_id}", response_model=Lesson)
@@ -598,10 +586,8 @@ async def get_lesson(lesson_id: str, request: Request):
     lesson = await db.lessons.find_one({"id": lesson_id}, {"_id": 0})
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-    
-    if isinstance(lesson['created_at'], str):
+    if isinstance(lesson.get('created_at'), str):
         lesson['created_at'] = datetime.fromisoformat(lesson['created_at'])
-    
     return lesson
 
 @api_router.post("/quiz/submit")
@@ -610,54 +596,24 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
     lesson = await db.lessons.find_one({"id": submission.lesson_id}, {"_id": 0})
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
-    
-    correct_answers = 0
+    correct_answers = sum(1 for i, answer in enumerate(submission.answers) if i < len(lesson.get('quiz_questions', [])) and lesson['quiz_questions'][i].get('correct_answer') == answer.get('selected_option'))
     total_questions = len(lesson.get('quiz_questions', []))
-    
-    for i, answer in enumerate(submission.answers):
-        if i < len(lesson['quiz_questions']):
-            question = lesson['quiz_questions'][i]
-            if question.get('correct_answer') == answer.get('selected_option'):
-                correct_answers += 1
-    
     score = int((correct_answers / total_questions) * 100) if total_questions > 0 else 0
-    
-    progress = UserProgress(
-        user_id=submission.user_id,
-        lesson_id=submission.lesson_id,
-        completed=True,
-        score=score,
-        completed_at=datetime.now(timezone.utc)
-    )
-    
+    progress = UserProgress(user_id=submission.user_id, lesson_id=submission.lesson_id, completed=True, score=score, completed_at=datetime.now(timezone.utc))
     doc = progress.model_dump()
     doc['completed_at'] = doc['completed_at'].isoformat()
-    
     await db.user_progress.insert_one(doc)
-    
-    await db.users.update_one(
-        {"id": submission.user_id},
-        {"$inc": {"total_score": score}, "$set": {"last_active": datetime.now(timezone.utc).isoformat()}}
-    )
-    
+    await db.users.update_one({"id": submission.user_id}, {"$inc": {"total_score": score}, "$set": {"last_active": datetime.now(timezone.utc).isoformat()}})
     return {"score": score, "correct_answers": correct_answers, "total_questions": total_questions, "passed": score >= 70}
 
 @api_router.post("/ai/ask", response_model=AIResponse)
 async def ask_ai_tutor(query: AIQuery):
     try:
-        system_prompt = """You are Dr. Rabbit...""" # Truncated
-        context = f"Previous context: {query.context}" if query.context else ""
-        
-        chat_completion = groq_client.chat.completions.create(
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": f"{context}\n\n{query.question}"}],
-            model="openai/gpt-oss-20b",
-            temperature=0.7,
-            max_tokens=300
-        )
+        system_prompt = """You are Dr. Rabbit...""" # Truncated for brevity
+        chat_completion = groq_client.chat.completions.create(messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": query.question}], model="openai/gpt-oss-20b", temperature=0.7, max_tokens=300)
         response_text = chat_completion.choices[0].message.content
         suggestions = ["Ask about tooth brushing techniques", "Learn about healthy foods for teeth"]
         return AIResponse(response=response_text, confidence=0.9, suggestions=suggestions)
-    
     except Exception as e:
         logging.error(f"AI query error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"An AI error occurred: {str(e)}")
@@ -666,11 +622,9 @@ async def ask_ai_tutor(query: AIQuery):
 async def get_user_progress(user_id: str, request: Request):
     db = get_database(request)
     progress = await db.user_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
-    
     for p in progress:
         if p.get('completed_at') and isinstance(p['completed_at'], str):
             p['completed_at'] = datetime.fromisoformat(p['completed_at'])
-    
     return progress
 
 @api_router.post("/initialize-data")
@@ -678,25 +632,12 @@ async def initialize_sample_data(request: Request):
     db = get_database(request)
     try:
         sample_lessons = [
-             {
-                "id": str(uuid.uuid4()),
-                "title": "Tooth Brushing Basics", "description": "Learn the proper way to brush your teeth", "level": 1,
-                "content": {"key_points": ["Brush for 2 minutes", "Use fluoride toothpaste"]},
-                "quiz_questions": [{"question": "How long?", "options": ["1 min", "2 mins"], "correct_answer": "2 mins"}],
-                "created_at": datetime.now(timezone.utc).isoformat()
-            },
-            {
-                "id": str(uuid.uuid4()),
-                "title": "Healthy Foods", "description": "Discover foods for strong teeth", "level": 1,
-                "content": {"key_points": ["Calcium is key", "Avoid sugar"]},
-                "quiz_questions": [{"question": "Best nutrient?", "options": ["Vitamin C", "Calcium"], "correct_answer": "Calcium"}],
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
+            {"id": str(uuid.uuid4()), "title": "Tooth Brushing Basics", "description": "Learn the proper way to brush your teeth", "level": 1, "content": {"key_points": ["Brush for 2 minutes", "Use fluoride toothpaste"]}, "quiz_questions": [{"question": "How long?", "options": ["1 min", "2 mins"], "correct_answer": "2 mins"}], "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Healthy Foods", "description": "Discover foods for strong teeth", "level": 1, "content": {"key_points": ["Calcium is key", "Avoid sugar"]}, "quiz_questions": [{"question": "Best nutrient?", "options": ["Vitamin C", "Calcium"], "correct_answer": "Calcium"}], "created_at": datetime.now(timezone.utc).isoformat()}
         ]
-        
         await db.lessons.delete_many({})
-        await db.lessons.insert_many(sample_lessons)
-        
+        if sample_lessons:
+            await db.lessons.insert_many(sample_lessons)
         return {"message": "Sample data initialized successfully"}
     except Exception as e:
         logging.error(f"DATABASE ERROR during data initialization: {str(e)}")
@@ -704,16 +645,8 @@ async def initialize_sample_data(request: Request):
 
 # --- Final App Configuration ---
 app.include_router(api_router)
-
 allowed_origin_regex = r"https?://(localhost:3000|.*\.vercel\.app)"
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=allowed_origin_regex,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+app.add_middleware(CORSMiddleware, allow_origin_regex=allowed_origin_regex, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
