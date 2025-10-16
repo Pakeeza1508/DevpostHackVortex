@@ -435,19 +435,18 @@ from groq import Groq
 from contextlib import asynccontextmanager
 from pymongo.errors import DuplicateKeyError
 
-# --- FastAPI Lifespan for Database Connection ---
-# This is the correct way to manage connections in a serverless environment.
+# --- CORRECT FastAPI Lifespan for Database Connection ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # This code runs on startup
+    # On startup, connect to the database and store the connection in app.state
     print("Connecting to the database...")
-    app.mongodb_client = AsyncIOMotorClient(os.environ["MONGO_URL"])
-    app.mongodb = app.mongodb_client[os.environ["DB_NAME"]]
+    app.state.mongodb_client = AsyncIOMotorClient(os.environ["MONGO_URL"])
+    app.state.mongodb = app.state.mongodb_client[os.environ["DB_NAME"]]
     print("Successfully connected to the database.")
     yield
-    # This code runs on shutdown
+    # On shutdown, close the connection
     print("Closing database connection.")
-    app.mongodb_client.close()
+    app.state.mongodb_client.close()
 
 # --- Main App Initialization ---
 ROOT_DIR = Path(__file__).parent
@@ -456,17 +455,14 @@ load_dotenv(ROOT_DIR / '.env')
 app = FastAPI(
     title="Dental Quest API",
     description="Interactive Dental Education Platform",
-    lifespan=lifespan  # Use the lifespan manager
+    lifespan=lifespan  # Use the corrected lifespan manager
 )
 
-# Groq client can remain global as it's stateless
 groq_client = Groq(api_key=os.environ['GROQ_API_KEY'])
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
 
-# --- Define Models (No changes needed here) ---
+# --- Define Models (No changes) ---
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -517,7 +513,7 @@ class AIResponse(BaseModel):
     suggestions: List[str] = Field(default_factory=list)
 
 
-# --- API Routes (Updated to use request.app.mongodb) ---
+# --- API Routes (CORRECTED to use request.app.state.mongodb) ---
 @api_router.get("/")
 async def root():
     return {"message": "Welcome to Dental Quest API!"}
@@ -526,8 +522,9 @@ async def root():
 async def create_user(user_data: UserCreate, request: Request):
     try:
         user_dict = user_data.model_dump()
+        db = request.app.state.mongodb
         
-        existing_user = await request.app.mongodb.users.find_one({"email": user_dict["email"]}, {"_id": 0})
+        existing_user = await db.users.find_one({"email": user_dict["email"]}, {"_id": 0})
         if existing_user:
             if isinstance(existing_user.get('created_at'), str):
                 existing_user['created_at'] = datetime.fromisoformat(existing_user['created_at'])
@@ -540,7 +537,7 @@ async def create_user(user_data: UserCreate, request: Request):
         doc['created_at'] = doc['created_at'].isoformat()
         doc['last_active'] = doc['last_active'].isoformat()
         
-        await request.app.mongodb.users.insert_one(doc)
+        await db.users.insert_one(doc)
         return user_obj
         
     except Exception as e:
@@ -549,7 +546,7 @@ async def create_user(user_data: UserCreate, request: Request):
 
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
-    user = await request.app.mongodb.users.find_one({"id": user_id}, {"_id": 0})
+    user = await request.app.state.mongodb.users.find_one({"id": user_id}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -566,7 +563,7 @@ async def get_lessons(request: Request, level: Optional[int] = None):
     if level:
         query["level"] = level
     
-    lessons = await request.app.mongodb.lessons.find(query, {"_id": 0}).to_list(1000)
+    lessons = await request.app.state.mongodb.lessons.find(query, {"_id": 0}).to_list(1000)
     
     for lesson in lessons:
         if isinstance(lesson['created_at'], str):
@@ -576,7 +573,7 @@ async def get_lessons(request: Request, level: Optional[int] = None):
 
 @api_router.get("/lessons/{lesson_id}", response_model=Lesson)
 async def get_lesson(lesson_id: str, request: Request):
-    lesson = await request.app.mongodb.lessons.find_one({"id": lesson_id}, {"_id": 0})
+    lesson = await request.app.state.mongodb.lessons.find_one({"id": lesson_id}, {"_id": 0})
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     
@@ -587,7 +584,8 @@ async def get_lesson(lesson_id: str, request: Request):
 
 @api_router.post("/quiz/submit")
 async def submit_quiz(submission: QuizSubmission, request: Request):
-    lesson = await request.app.mongodb.lessons.find_one({"id": submission.lesson_id}, {"_id": 0})
+    db = request.app.state.mongodb
+    lesson = await db.lessons.find_one({"id": submission.lesson_id}, {"_id": 0})
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     
@@ -613,9 +611,9 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
     doc = progress.model_dump()
     doc['completed_at'] = doc['completed_at'].isoformat()
     
-    await request.app.mongodb.user_progress.insert_one(doc)
+    await db.user_progress.insert_one(doc)
     
-    await request.app.mongodb.users.update_one(
+    await db.users.update_one(
         {"id": submission.user_id},
         {"$inc": {"total_score": score}, "$set": {"last_active": datetime.now(timezone.utc).isoformat()}}
     )
@@ -625,7 +623,7 @@ async def submit_quiz(submission: QuizSubmission, request: Request):
 @api_router.post("/ai/ask", response_model=AIResponse)
 async def ask_ai_tutor(query: AIQuery):
     try:
-        system_prompt = """You are Dr. Rabbit, a friendly AI dental education tutor...""" # Truncated for brevity
+        system_prompt = """You are Dr. Rabbit...""" # Truncated
         context = f"Previous context: {query.context}" if query.context else ""
         
         chat_completion = groq_client.chat.completions.create(
@@ -646,7 +644,7 @@ async def ask_ai_tutor(query: AIQuery):
 
 @api_router.get("/users/{user_id}/progress")
 async def get_user_progress(user_id: str, request: Request):
-    progress = await request.app.mongodb.user_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
+    progress = await request.app.state.mongodb.user_progress.find({"user_id": user_id}, {"_id": 0}).to_list(1000)
     
     for p in progress:
         if p.get('completed_at') and isinstance(p['completed_at'], str):
@@ -658,12 +656,12 @@ async def get_user_progress(user_id: str, request: Request):
 async def initialize_sample_data(request: Request):
     try:
         sample_lessons = [
-            # The full content of sample_lessons is in your original file. It is correct.
-            # I am omitting it here for brevity, but you should have it in your code.
+            # ... The full content of your sample_lessons should be here ...
         ]
+        db = request.app.state.mongodb
         
-        await request.app.mongodb.lessons.delete_many({})
-        await request.app.mongodb.lessons.insert_many(sample_lessons)
+        await db.lessons.delete_many({})
+        await db.lessons.insert_many(sample_lessons)
         
         return {"message": "Sample data initialized successfully"}
     except Exception as e:
