@@ -349,10 +349,26 @@ async def initialize_sample_data():
         }
     ]
     
-    await db.lessons.delete_many({})  # Clear existing lessons
-    await db.lessons.insert_many(sample_lessons)
+    # await db.lessons.delete_many({})  # Clear existing lessons
+    # await db.lessons.insert_many(sample_lessons)
     
+    # return {"message": "Sample data initialized successfully"}
+    logging.info("Attempting to clear existing lessons from the database.")
+    await db.lessons.delete_many({})  # Clear existing lessons
+    logging.info("Successfully cleared lessons. Now inserting new sample data.")
+    await db.lessons.insert_many(sample_lessons)
+    logging.info("Successfully inserted sample data.")
+        
     return {"message": "Sample data initialized successfully"}
+
+    except Exception as e:
+        # Log the detailed error to Vercel logs
+        logging.error(f"DATABASE ERROR during data initialization: {e}")
+        # Return a specific error message to the frontend
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initialize data. A database error occurred: {e}"
+        )
 
 # Include the router in the main app
 app.include_router(api_router)
