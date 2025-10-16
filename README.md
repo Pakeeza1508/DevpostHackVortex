@@ -1,7 +1,6 @@
 # Dental Quest: AI-Powered Dental Education Platform
 
 Dental Quest is an interactive, full-stack web application designed to make learning about dental health fun and engaging. It features AI-powered tutoring, interactive lessons, quizzes, and challenges.
-
 ## ✨ Tech Stack
 
 -   **Backend:** Python, FastAPI, MongoDB, Groq AI
