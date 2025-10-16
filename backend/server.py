@@ -284,6 +284,26 @@ async def get_user_progress(user_id: str):
     
     return progress
 
+    @api_router.get("/debug-env")
+async def debug_environment_variables():
+    mongo_url = os.environ.get("MONGO_URL", "--- NOT SET ---")
+    groq_api_key = os.environ.get("GROQ_API_KEY", "--- NOT SET ---")
+    db_name = os.environ.get("DB_NAME", "--- NOT SET ---")
+
+    # To avoid leaking full secrets, we'll show a preview
+    mongo_preview = f"{mongo_url[:15]}...{mongo_url[-5:]}" if mongo_url != "--- NOT SET ---" else "N/A"
+    groq_preview = f"{groq_api_key[:5]}...{groq_api_key[-4:]}" if groq_api_key != "--- NOT SET ---" else "N/A"
+
+    return {
+        "message": "Reading environment variables from Vercel's backend environment.",
+        "mongo_url_status": "Set" if "--- NOT SET ---" not in mongo_url else "MISSING",
+        "mongo_url_preview": mongo_preview,
+        "groq_api_key_status": "Set" if "--- NOT SET ---" not in groq_api_key else "MISSING",
+        "groq_api_key_preview": groq_preview,
+        "db_name_status": "Set" if "--- NOT SET ---" not in db_name else "MISSING",
+        "db_name_value": db_name
+    }
+
 # Initialize sample data
 @api_router.post("/initialize-data")
 async def initialize_sample_data():
