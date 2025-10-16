@@ -118,6 +118,7 @@ const ProfilePage = ({ user, setUser }) => {
   };
 
   const getLevelProgress = () => {
+    if (!user) return 0;
     const currentLevelBase = (user.level - 1) * 100;
     const nextLevelRequirement = user.level * 100;
     const progress =
