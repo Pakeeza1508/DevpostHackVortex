@@ -7,6 +7,7 @@ Dental Quest is an interactive, full-stack web application designed to make lear
 -   **Backend:** Python, FastAPI, MongoDB, Groq AI
 -   **Frontend:** React, Framer Motion, Tailwind CSS
 -   **Package Managers:** Pip (Python), Yarn (JavaScript)
+-   **Deployment:** Vercel
 
 ## 🚀 Prerequisites
 
