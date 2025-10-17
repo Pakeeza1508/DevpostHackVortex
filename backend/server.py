@@ -240,6 +240,8 @@
 
 # --- START: PASTE THIS ENTIRE BLOCK INTO backend/server.py ---
 
+print("--- PYTHON SCRIPT 'server.py' IS EXECUTING ---")
+
 from fastapi import FastAPI, APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
