@@ -295,7 +295,8 @@ async def shutdown_db_client():
 
 # --- API Router and other initializations ---
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-api_router = APIRouter(prefix="/api")
+# api_router = APIRouter(prefix="/api")
+api_router = APIRouter()
 
 
 # --- Define Models (No changes needed here) ---
