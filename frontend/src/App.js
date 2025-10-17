@@ -64,32 +64,77 @@ function App() {
   //   }
   // };
   // REPLACE your old initializeApp function with this one
+  // const initializeApp = async () => {
+  //   try {
+  //     // Initialize sample data first
+  //     await axios.post(`${API}/initialize-data`);
+
+  //     // Now, try to find or create the demo user.
+  //     // The updated backend handles this logic automatically.
+  //     const demoUser = {
+  //       username: "Advanced Explorer",
+  //       email: "explorer@dentalquest.academy"
+  //     };
+
+  //     const userResponse = await axios.post(`${API}/users`, demoUser);
+  //     setUser(userResponse.data);
+
+  //     // Get lessons
+  //     const lessonsResponse = await axios.get(`${API}/lessons`);
+  //     setLessons(lessonsResponse.data);
+
+  //     // Simulate loading for better UX
+  //     setTimeout(() => setIsLoading(false), 2000); // Reduced timeout
+  //   } catch (error) {
+  //     console.error("App initialization error:", error);
+  //     // You can add more specific error handling here if needed
+  //     setIsLoading(false); // Stop loading even if there's an error
+  //   }
+  // };
+  // In frontend/src/App.js
+  // In frontend/src/App.js
+
+  // REPLACE your old initializeApp function with this one
   const initializeApp = async () => {
-    try {
-      // Initialize sample data first
-      await axios.post(`${API}/initialize-data`);
+    console.log("--- RUNNING IN OFFLINE MODE WITH FAKE DATA ---");
+    console.log("Bypassing all API calls.");
 
-      // Now, try to find or create the demo user.
-      // The updated backend handles this logic automatically.
-      const demoUser = {
-        username: "Advanced Explorer",
-        email: "explorer@dentalquest.academy"
-      };
+    // 1. Create a fake user object. This is what the backend would normally send.
+    const fakeUser = {
+      id: "fake-user-12345",
+      username: "Hackathon Explorer",
+      email: "explorer@dentalquest.academy",
+      level: 2,
+      total_score: 150,
+      achievements: ["explorer", "expert"],
+    };
 
-      const userResponse = await axios.post(`${API}/users`, demoUser);
-      setUser(userResponse.data);
+    // 2. Create some fake lesson data.
+    const fakeLessons = [
+      {
+        id: "lesson-1-fake",
+        title: "Tooth Brushing Basics (Demo)",
+        description: "Learn the proper way to brush your teeth for optimal oral hygiene.",
+        level: 1,
+        content: { key_points: ["Brush for at least 2 minutes", "Use fluoride toothpaste"] },
+        quiz_questions: [{ question: "How long should you brush your teeth?", options: ["30 seconds", "1 minute", "2 minutes"], correct_answer: "2 minutes" }],
+      },
+      {
+        id: "lesson-2-fake",
+        title: "Healthy Foods for Strong Teeth (Demo)",
+        description: "Discover which foods help keep your teeth strong and healthy.",
+        level: 1,
+        content: { key_points: ["Calcium-rich foods are great", "Avoid sugary snacks"] },
+        quiz_questions: [{ question: "Which is best for teeth?", options: ["Candy", "Cheese", "Soda"], correct_answer: "Cheese" }],
+      },
+    ];
 
-      // Get lessons
-      const lessonsResponse = await axios.get(`${API}/lessons`);
-      setLessons(lessonsResponse.data);
+    // 3. Immediately set the state with this fake data.
+    setUser(fakeUser);
+    setLessons(fakeLessons);
 
-      // Simulate loading for better UX
-      setTimeout(() => setIsLoading(false), 2000); // Reduced timeout
-    } catch (error) {
-      console.error("App initialization error:", error);
-      // You can add more specific error handling here if needed
-      setIsLoading(false); // Stop loading even if there's an error
-    }
+    // 4. Stop the main loading screen.
+    setTimeout(() => setIsLoading(false), 1000); // 1-second delay for effect
   };
 
   if (isLoading) {
