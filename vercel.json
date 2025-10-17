@@ -13,34 +13,11 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      "dest": "backend/server.py"
+      "source": "/api/(.*)",
+      "destination": "/backend/server.py"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "/frontend/static/$1"
-    },
-    {
-      "src": "/asset-manifest.json",
-      "dest": "/frontend/asset-manifest.json"
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/frontend/favicon.ico"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/frontend/manifest.json"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/index.html"
-    }
-  ]
-}
+      "source": "/(.*)",
+      "destination": "/frontend/index.html"
