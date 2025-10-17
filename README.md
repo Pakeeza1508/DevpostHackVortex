@@ -104,3 +104,11 @@ Start the React development server:
 yarn start
 ```
 Your default web browser should automatically open to http://localhost:3000. The application is now running!
+
+
+```
+# Commands for your teammates:
+git checkout main
+git fetch origin
+git reset --hard origin/main
+```
