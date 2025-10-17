@@ -252,52 +252,46 @@ from typing import List, Optional, Dict, Any
 import uuid
 from datetime import datetime, timezone
 from groq import Groq
-from contextlib import asynccontextmanager
-from pymongo.errors import DuplicateKeyError
-
-# --- CORRECT FastAPI Lifespan for Database Connection ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # This code runs on startup.
-    mongo_url = os.environ.get("MONGO_URL")
-    db_name = os.environ.get("DB_NAME")
-    logging.info(f"LIFESPAN START: MONGO_URL_IS_SET: {mongo_url is not None}, DB_NAME_IS_SET: {db_name is not None}")
-    logging.warning("--- SENSITIVE DEBUGGING ENABLED ---")
-    logging.warning(f"LIFESPAN DEBUG: The exact MONGO_URL string being used is: {mongo_url}")
-
-    if not mongo_url or not db_name:
-        logging.error("LIFESPAN ERROR: MONGO_URL and/or DB_NAME are NOT SET in Vercel environment variables.")
-        app.state.mongodb_client = None
-        app.state.mongodb = None
-    else:
-        try:
-            logging.info("LIFESPAN: Connecting to the database...")
-            app.state.mongodb_client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
-            await app.state.mongodb_client.admin.command('ismaster')
-            app.state.mongodb = app.state.mongodb_client[db_name]
-            logging.info("LIFESPAN: Successfully connected to the database.")
-        except Exception as e:
-            logging.error(f"LIFESPAN ERROR: Could not connect to MongoDB. Error: {e}", exc_info=True)
-            app.state.mongodb_client = None
-            app.state.mongodb = None
-    
-    yield
-    
-    # This code runs on shutdown.
-    if hasattr(app.state, 'mongodb_client') and app.state.mongodb_client:
-        logging.info("LIFESPAN: Closing database connection.")
-        app.state.mongodb_client.close()
 
 # --- Main App Initialization ---
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# Initialize FastAPI app without lifespan
 app = FastAPI(
     title="Dental Quest API",
-    description="Interactive Dental Education Platform",
-    lifespan=lifespan
+    description="Interactive Dental Education Platform"
 )
 
+# --- CORRECTED STARTUP AND SHUTDOWN EVENTS ---
+@app.on_event("startup")
+async def startup_db_client():
+    mongo_url = os.environ.get("MONGO_URL")
+    db_name = os.environ.get("DB_NAME")
+    if mongo_url and db_name:
+        try:
+            logging.info("Connecting to MongoDB...")
+            app.mongodb_client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+            # Verify connection
+            await app.mongodb_client.admin.command('ismaster')
+            app.db = app.mongodb_client[db_name]
+            logging.info("MongoDB connection successful.")
+        except Exception as e:
+            logging.error(f"FATAL: Failed to connect to MongoDB: {e}", exc_info=True)
+            app.mongodb_client = None
+            app.db = None
+    else:
+        logging.error("FATAL: MONGO_URL and/or DB_NAME environment variables are not set.")
+        app.mongodb_client = None
+        app.db = None
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    if hasattr(app, 'mongodb_client') and app.mongodb_client:
+        app.mongodb_client.close()
+        logging.info("MongoDB connection closed.")
+
+# --- API Router and other initializations ---
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 api_router = APIRouter(prefix="/api")
 
@@ -353,31 +347,15 @@ class AIResponse(BaseModel):
     suggestions: List[str] = Field(default_factory=list)
 
 
-# --- API Routes (Updated with more logging) ---
+# --- API Routes (Updated to use app.db) ---
 def get_database(request: Request):
-    if not hasattr(request.app.state, 'mongodb') or request.app.state.mongodb is None:
-        logging.error("get_database call failed because db connection is not available.")
+    if not hasattr(request.app, 'db') or request.app.db is None:
         raise HTTPException(status_code=500, detail="Database connection is not available.")
-    return request.app.state.mongodb
+    return request.app.db
 
-# --- !!! THIS IS THE DIAGNOSTIC ENDPOINT !!! ---
 @api_router.get("/")
-async def root(request: Request):
-    mongo_url = os.environ.get("MONGO_URL")
-    db_name = os.environ.get("DB_NAME")
-    groq_key = os.environ.get("GROQ_API_KEY")
-    
-    db_connection_state = "Connected" if hasattr(request.app.state, 'mongodb') and request.app.state.mongodb is not None else "NOT CONNECTED"
-
-    return {
-        "message": "Welcome to Dental Quest API - DIAGNOSTIC CHECK",
-        "environment_variables_status": {
-            "MONGO_URL_IS_SET": mongo_url is not None,
-            "DB_NAME_IS_SET": db_name is not None,
-            "GROQ_API_KEY_IS_SET": groq_key is not None,
-        },
-        "database_connection_state": db_connection_state
-    }
+async def root():
+    return {"message": "Welcome to Dental Quest API!"}
 
 @api_router.post("/users", response_model=User)
 async def create_user(user_data: UserCreate, request: Request):
@@ -401,7 +379,6 @@ async def create_user(user_data: UserCreate, request: Request):
         logging.error(f"Error in create_user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error in create_user: {str(e)}")
 
-# (The rest of the functions are the same as before)
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
     db = get_database(request)
@@ -475,24 +452,12 @@ async def get_user_progress(user_id: str, request: Request):
 
 @api_router.post("/initialize-data")
 async def initialize_sample_data(request: Request):
-    logging.info("Entered initialize_sample_data function.")
+    db = get_database(request)
     try:
-        db = get_database(request)
-        logging.info("Successfully got database instance.")
-        
-        sample_lessons = [
-            {"id": str(uuid.uuid4()), "title": "Tooth Brushing Basics", "description": "Learn the proper way to brush your teeth", "level": 1, "content": {"key_points": ["Brush for 2 minutes", "Use fluoride toothpaste"]}, "quiz_questions": [{"question": "How long?", "options": ["1 min", "2 mins"], "correct_answer": "2 mins"}], "created_at": datetime.now(timezone.utc).isoformat()},
-            {"id": str(uuid.uuid4()), "title": "Healthy Foods", "description": "Discover foods for strong teeth", "level": 1, "content": {"key_points": ["Calcium is key", "Avoid sugar"]}, "quiz_questions": [{"question": "Best nutrient?", "options": ["Vitamin C", "Calcium"], "correct_answer": "Calcium"}], "created_at": datetime.now(timezone.utc).isoformat()}
-        ]
-        
-        logging.info("Attempting to delete existing lessons.")
+        sample_lessons = [{"id": str(uuid.uuid4()),"title": "Tooth Brushing Basics","description": "Learn the proper way to brush your teeth","level": 1,"content": {"key_points": ["Brush for 2 minutes", "Use fluoride toothpaste"]},"quiz_questions": [{"question": "How long?","options": ["1 min", "2 mins"],"correct_answer": "2 mins"}],"created_at": datetime.now(timezone.utc).isoformat()},{"id": str(uuid.uuid4()),"title": "Healthy Foods","description": "Discover foods for strong teeth","level": 1,"content": {"key_points": ["Calcium is key", "Avoid sugar"]},"quiz_questions": [{"question": "Best nutrient?","options": ["Vitamin C", "Calcium"],"correct_answer": "Calcium"}],"created_at": datetime.now(timezone.utc).isoformat()}]
         await db.lessons.delete_many({})
-        logging.info("Successfully deleted lessons. Attempting to insert new lessons.")
-        
         if sample_lessons:
             await db.lessons.insert_many(sample_lessons)
-            
-        logging.info("Successfully inserted new sample lessons.")
         return {"message": "Sample data initialized successfully"}
     except Exception as e:
         logging.error(f"CRASH in initialize_sample_data: {str(e)}", exc_info=True)
