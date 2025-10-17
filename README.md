@@ -1,36 +1,48 @@
-# Dental Quest: AI-Powered Dental Education Platform
+# 🦷 Dental Quest: AI-Powered Dental Education Platform
 
-Dental Quest is an interactive, full-stack web application designed to make learning about dental health fun and engaging. It features AI-powered tutoring, interactive lessons, quizzes, and challenges.
+**Dental Quest** is an interactive, full-stack web application designed to make learning about dental health *fun and engaging*.  
+It features **AI-powered tutoring**, **interactive lessons**, **quizzes**, and **challenges** to help users explore dental education through gamified learning experiences.
+
+Built as part of the **Devpost Hack Vortex Hackathon**, this project showcases how AI and modern full-stack tools can make education both smart and accessible.
+
+---
+
 ## ✨ Tech Stack
 
--   **Backend:** Python, FastAPI, MongoDB, Groq AI
--   **Frontend:** React, Framer Motion, Tailwind CSS
--   **Package Managers:** Pip (Python), Yarn (JavaScript)
--   **Deployment:** Vercel
+| Layer | Technologies |
+|-------|---------------|
+| **Frontend** | React · Tailwind CSS · Framer Motion |
+| **Backend** | Python · FastAPI · MongoDB · Groq AI |
+| **Package Managers** | Pip (Python) · Yarn (JavaScript) |
+| **Deployment** | Vercel |
+
+---
 
 ## 🚀 Prerequisites
 
-Before you begin, ensure you have the following installed on your system:
+Before setting up the project locally, make sure you have the following installed:
 
-1.  **Python** (version 3.7+ recommended)
-2.  **Node.js** (version 18+ recommended)
-3.  **Yarn** (If you don't have it, install it globally by running: `npm install -g yarn`)
-4.  **MongoDB Atlas Account:** A free account for the cloud database.
-5.  **Groq AI Account:** A free account to get an API key for the AI tutor.
+1. **Python** (version 3.7 or higher)  
+2. **Node.js** (version 18 or higher)  
+3. **Yarn** (install globally if missing):
+   ```bash
+   npm install -g yarn
+4. **MongoDB Atlas Account** — for cloud-based database
+5. **Groq AI Account** — to obtain your API key for the AI tutor
 ---
 
 ## ⚙️ Setup and Installation Guide
 
 Follow these steps to set up your local development environment.
 
-### Step 1: Clone the Repository
+### Clone the Repository
 
 ```bash
 git clone <your-repository-url>
 cd <your-project-directory>
 ```
 
-### Step 2: Backend Setup (Python & FastAPI)
+### Backend Setup (Python & FastAPI)
 
 ```
 # On Windows
@@ -105,10 +117,35 @@ yarn start
 ```
 Your default web browser should automatically open to http://localhost:3000. The application is now running!
 
-
-```
 # Commands for your teammates:
+```
 git checkout main
 git fetch origin
 git reset --hard origin/main
 ```
+
+## 🧩 Hackathon Context
+
+Built for **Devpost HackVortex**, Dental Quest leverages AI and modern full-stack tools to reimagine how dental education can be delivered interactively.  
+From smart AI tutors to playful quizzes, the platform blends *learning* with *engagement*.
+---
+## 🏁 Deployment
+
+Hosted on **Vercel** for seamless CI/CD integration and instant frontend updates.
+
+🔗 **Live Demo:** [https://hack-vortex-frontend.vercel.app/]
+
+---
+
+## 📬 Contributors
+
+- **Pakeeza** 
+- **Mehboob** 
+- **Talha** 
+- **Abdul Rehman** 
+
+## 🧠 Keywords
+
+`AI Tutor` · `Dental Education` · `FastAPI` · `Groq AI` · `React` · `Tailwind` · `Framer Motion` · `Hackathon Project`
+
+
