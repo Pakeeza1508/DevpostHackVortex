@@ -261,22 +261,21 @@ async def lifespan(app: FastAPI):
     # This code runs on startup.
     mongo_url = os.environ.get("MONGO_URL")
     db_name = os.environ.get("DB_NAME")
-    logging.info(f"Attempting to connect with MONGO_URL_IS_SET: {mongo_url is not None}, DB_NAME_IS_SET: {db_name is not None}")
+    logging.info(f"LIFESPAN START: MONGO_URL_IS_SET: {mongo_url is not None}, DB_NAME_IS_SET: {db_name is not None}")
 
     if not mongo_url or not db_name:
-        logging.error("FATAL ERROR: MONGO_URL and DB_NAME must be set in Vercel environment variables.")
+        logging.error("LIFESPAN ERROR: MONGO_URL and/or DB_NAME are NOT SET in Vercel environment variables.")
         app.state.mongodb_client = None
         app.state.mongodb = None
     else:
         try:
-            logging.info("Connecting to the database...")
-            app.state.mongodb_client = AsyncIOMotorClient(mongo_url)
-            # The ismaster command is cheap and does not require auth, used to test connection.
+            logging.info("LIFESPAN: Connecting to the database...")
+            app.state.mongodb_client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
             await app.state.mongodb_client.admin.command('ismaster')
             app.state.mongodb = app.state.mongodb_client[db_name]
-            logging.info("Successfully connected to the database and verified connection.")
+            logging.info("LIFESPAN: Successfully connected to the database.")
         except Exception as e:
-            logging.error(f"FATAL ERROR: Could not connect to MongoDB. Error: {e}", exc_info=True)
+            logging.error(f"LIFESPAN ERROR: Could not connect to MongoDB. Error: {e}", exc_info=True)
             app.state.mongodb_client = None
             app.state.mongodb = None
     
@@ -284,7 +283,7 @@ async def lifespan(app: FastAPI):
     
     # This code runs on shutdown.
     if hasattr(app.state, 'mongodb_client') and app.state.mongodb_client:
-        logging.info("Closing database connection.")
+        logging.info("LIFESPAN: Closing database connection.")
         app.state.mongodb_client.close()
 
 # --- Main App Initialization ---
@@ -355,14 +354,28 @@ class AIResponse(BaseModel):
 # --- API Routes (Updated with more logging) ---
 def get_database(request: Request):
     if not hasattr(request.app.state, 'mongodb') or request.app.state.mongodb is None:
-        # This is where the crash is likely originating
         logging.error("get_database call failed because db connection is not available.")
         raise HTTPException(status_code=500, detail="Database connection is not available.")
     return request.app.state.mongodb
 
+# --- !!! THIS IS THE DIAGNOSTIC ENDPOINT !!! ---
 @api_router.get("/")
-async def root():
-    return {"message": "Welcome to Dental Quest API!"}
+async def root(request: Request):
+    mongo_url = os.environ.get("MONGO_URL")
+    db_name = os.environ.get("DB_NAME")
+    groq_key = os.environ.get("GROQ_API_KEY")
+    
+    db_connection_state = "Connected" if hasattr(request.app.state, 'mongodb') and request.app.state.mongodb is not None else "NOT CONNECTED"
+
+    return {
+        "message": "Welcome to Dental Quest API - DIAGNOSTIC CHECK",
+        "environment_variables_status": {
+            "MONGO_URL_IS_SET": mongo_url is not None,
+            "DB_NAME_IS_SET": db_name is not None,
+            "GROQ_API_KEY_IS_SET": groq_key is not None,
+        },
+        "database_connection_state": db_connection_state
+    }
 
 @api_router.post("/users", response_model=User)
 async def create_user(user_data: UserCreate, request: Request):
@@ -386,6 +399,7 @@ async def create_user(user_data: UserCreate, request: Request):
         logging.error(f"Error in create_user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error in create_user: {str(e)}")
 
+# (The rest of the functions are the same as before)
 @api_router.get("/users/{user_id}", response_model=User)
 async def get_user(user_id: str, request: Request):
     db = get_database(request)
