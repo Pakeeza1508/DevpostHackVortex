@@ -262,6 +262,8 @@ async def lifespan(app: FastAPI):
     mongo_url = os.environ.get("MONGO_URL")
     db_name = os.environ.get("DB_NAME")
     logging.info(f"LIFESPAN START: MONGO_URL_IS_SET: {mongo_url is not None}, DB_NAME_IS_SET: {db_name is not None}")
+    logging.warning("--- SENSITIVE DEBUGGING ENABLED ---")
+    logging.warning(f"LIFESPAN DEBUG: The exact MONGO_URL string being used is: {mongo_url}")
 
     if not mongo_url or not db_name:
         logging.error("LIFESPAN ERROR: MONGO_URL and/or DB_NAME are NOT SET in Vercel environment variables.")
