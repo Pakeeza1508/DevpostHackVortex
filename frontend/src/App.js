@@ -13,8 +13,8 @@ import ProfilePage from "./components/ProfilePage";
 import ChallengePage from "./components/ChallengePage";
 import { Toaster } from "./components/ui/sonner";
 
-// const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const BACKEND_URL = process.env.NODE_ENV === 'production' ? '' : process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// const BACKEND_URL = process.env.NODE_ENV === 'production' ? '' : process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 // Main App Component
